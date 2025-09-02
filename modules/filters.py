@@ -312,7 +312,7 @@ def register(bot):
                 out = out.replace("{GROUPNAME}", m.chat.title or str(gid))
                 kb = render_buttons_kb(resp.get("buttons") or [])
                 try:
-                    bot.reply_to(m, out, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=True)
+                    bot.reply_to(m, out, reply_markup=kb, parse_mode="HTML", disable_web_page_preview=False)
                 except Exception:
                     bot.reply_to(m, resp.get("text",""), reply_markup=kb, disable_web_page_preview=False)
                 break

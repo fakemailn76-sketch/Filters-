@@ -19,5 +19,5 @@ VOLUME ["/data"]
 # Env variable default
 ENV BOT_DATA_DIR=/data
 
-# Container run হলে main.py চালু হবে
-CMD ["python", "main.py"]
+# Container run হলে gunicorn দিয়ে main.py চালু হবে
+CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:${PORT}"]

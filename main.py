@@ -1,10 +1,11 @@
 # main.py
-# Run: pip install pyTelegramBotAPI
+# Run: pip install pyTelegramBotAPI Flask
 # BOT_TOKEN env var set করুন, না হলে নিচের ডামি টোকেন বদলে দিন
 
 import os
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from flask import Flask, request
 
 from state import USER_GROUPS, GROUP_SETTINGS   # তোমার বিদ্যমান state.py
 try:
@@ -62,17 +63,8 @@ def start_cmd(m):
             info = USER_GROUPS[m.from_user.id].get(gid)
             # স্টার্ট টেক্সট পাঠাই
             bot.reply_to(m, start_text, parse_mode="HTML", reply_markup=kb)
-            # চাইলে নিচের ব্লক অন করলে deep-link সেটিংস মেসেজও সাথে দেখাতে পারো:
-            # if info:
-            #     bot.send_message(
-            #         m.chat.id,
-            #         f"⚙️ <b>Settings</b>\nGroup: <b>{info['title']}</b>\n\n"
-            #         "Filters manage in PM",
-            #         parse_mode="HTML"
-            #     )
             return
         except Exception:
-            # কোনো কারণেই পার্স না হলে—ডিফল্ট স্টার্ট
             bot.reply_to(m, start_text, parse_mode="HTML", reply_markup=kb)
             return
 
@@ -136,7 +128,6 @@ def connect_cmd(m):
     except Exception:
         bot.reply_to(m, "সঠিক group id দিন", parse_mode="HTML")
         return
-    # টাইটেল জানা না থাকলেও লিঙ্ক করবো
     title = str(gid)
     try:
         ch = bot.get_chat(gid)
@@ -150,8 +141,26 @@ def connect_cmd(m):
 from modules.filters import register as register_filters
 register_filters(bot)
 
-print("Bot is running…")
-bot.infinity_polling(
-    allowed_updates=['message','callback_query','chat_member','my_chat_member','chat_join_request'],
-    timeout=20, long_polling_timeout=20
-)
+# ---------- Flask Webhook ----------
+app = Flask(__name__)
+
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def webhook():
+    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+    bot.process_new_updates([update])
+    return "ok", 200
+
+@app.route("/", methods=["GET"])
+def index():
+    return "Bot is alive!", 200
+
+if __name__ == "__main__":
+    # Zeabur ডোমেইন এনভায়রনমেন্ট থেকে নাও
+    app_name = os.environ.get("ZEABUR_APP_NAME", "your-app-name")
+    url = f"https://{app_name}.zeabur.app/{BOT_TOKEN}"
+
+    bot.remove_webhook()
+    bot.set_webhook(url=url)
+
+    print("Bot is running (Webhook mode)…")
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
